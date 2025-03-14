@@ -35,7 +35,14 @@ const login = async (req, res) => {
         const userData = user.toObject();
         delete userData.password; // Xóa password trước khi gửi về
 
-        return res.status(200).json({ message: "Đăng nhập thành công", user: userData });
+        return res.status(200).json({
+            message: "Đăng nhập thành công",
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+            }
+        });
     } catch (error) {
         console.error("Lỗi khi đăng nhập:", error);
         return res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại sau" });
@@ -127,37 +134,72 @@ const forgotPassword = async (req, res) => {
         return res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại." });
     }
 };
-
-// 📌 Đặt lại mật khẩu bằng OTP
-const resetPassword = async (req, res) => {
-    const { email, otp, newPassword } = req.body;
-    if (!email || !otp || !newPassword) {
+// 📌 Xác nhận OTP khi lấy lại mật khẩu
+const verifyOTP =  async (req, res) => {
+    const { email, otp } = req.body;
+    if (!email || !otp ) {
         return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin" });
     }
-
     try {
         const user = await User.findOne({ email, otp });
         if (!user) {
             return res.status(400).json({ message: "Mã OTP không hợp lệ" });
         }
 
+        user.otp = null;
+        await user.save();
+
+        return res.status(200).json({ message: "Mã OTP chính xác" });
+    } catch (error) {
+        return res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại." });
+    }
+    
+}
+// 📌 Đặt lại mật khẩu
+
+const resetPassword = async (req, res) => {
+    const { email, newPassword, confirmPassword } = req.body;
+
+    // Kiểm tra dữ liệu đầu vào
+    if (!email || !newPassword || !confirmPassword) {
+        return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin." });
+    }
+
+    if (newPassword !== confirmPassword) {
+        return res.status(400).json({ message: "Mật khẩu xác nhận không khớp." });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Mật khẩu phải có ít nhất 6 ký tự." });
+    }
+
+    try {
+        // Kiểm tra xem email có tồn tại không
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(400).json({ message: "Email không tồn tại." });
+        }
+
+        // Mã hóa mật khẩu mới
         user.password = await bcrypt.hash(newPassword, 10);
+        
+        // Xóa thông tin OTP để tránh sử dụng lại
         user.otp = null;
         user.otpExpiresAt = null;
         await user.save();
 
         return res.status(200).json({ message: "Đặt lại mật khẩu thành công." });
     } catch (error) {
-        console.error("Lỗi đặt lại mật khẩu:", error);
-        return res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại." });
+        return res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại sau." });
     }
 };
-
 module.exports = {
     getUserByUsername,
     login,
     register,
     verifyAccount,
     forgotPassword,
+    verifyOTP,
     resetPassword,
 };
