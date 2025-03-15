@@ -2,6 +2,7 @@ const User = require("../models/user"); // Import User model từ Mongoose
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const { sendMail } = require("../utils/mail");
+const cloudinary = require("../config/cloudinary");
 
 // 📌 Lấy thông tin người dùng theo username
 const getUserByUsername = async (req, res) => {
@@ -50,21 +51,32 @@ const login = async (req, res) => {
 };
 
 // 📌 Đăng ký người dùng
+// 📌 Đăng ký người dùng
 const register = async (req, res) => {
-    const { username, email, password } = req.body;
-    if (!username || !email || !password) {
+    const { username, email, password, confirmPassword } = req.body;
+
+    // 🔹 Kiểm tra xem các trường có đầy đủ không
+    if (!username || !email || !password || !confirmPassword) {
         return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin" });
     }
 
+    // 🔹 Kiểm tra mật khẩu nhập lại có đúng không
+    if (password !== confirmPassword) {
+        return res.status(400).json({ message: "Mật khẩu xác nhận không khớp" });
+    }
+
     try {
+        // 🔹 Kiểm tra username hoặc email đã tồn tại chưa
         const existingUser = await User.findOne({ $or: [{ username }, { email }] });
         if (existingUser) {
             return res.status(400).json({ message: "Username hoặc email đã tồn tại" });
         }
 
+        // 🔹 Tạo OTP ngẫu nhiên và mã hóa mật khẩu
         const otp = crypto.randomInt(100000, 999999).toString();
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // 🔹 Tạo user mới
         const newUser = new User({
             username,
             email,
@@ -82,6 +94,7 @@ const register = async (req, res) => {
         return res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại." });
     }
 };
+
 
 // 📌 Xác minh tài khoản bằng OTP
 const verifyAccount = async (req, res) => {
@@ -194,6 +207,34 @@ const resetPassword = async (req, res) => {
         return res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại sau." });
     }
 };
+
+const uploadAvatar = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!req.file) {
+            return res.status(400).json({ error: "Vui lòng chọn ảnh để upload!" });
+        }
+
+        // Lưu ảnh tạm vào file buffer
+        const fileBuffer = `data:image/jpeg;base64,${req.file.buffer.toString("base64")}`;
+
+        // Upload ảnh lên Cloudinary
+        const result = await cloudinary.uploader.upload(fileBuffer, {
+            folder: "avatars", 
+        });
+
+         // Cập nhật URL avatar vào MongoDB
+         const user = await User.findByIdAndUpdate(userId, 
+            { avatar: result.secure_url, updatedAt: new Date() }, 
+            { new: true }
+        ).select("_id username email avatar updatedAt");
+
+        return res.json({ message: "Upload thành công", user });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
 module.exports = {
     getUserByUsername,
     login,
@@ -202,4 +243,5 @@ module.exports = {
     forgotPassword,
     verifyOTP,
     resetPassword,
+    uploadAvatar,
 };
