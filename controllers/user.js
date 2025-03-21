@@ -51,19 +51,14 @@ const login = async (req, res) => {
 };
 
 // 📌 Đăng ký người dùng
-// 📌 Đăng ký người dùng
 const register = async (req, res) => {
-    const { username, email, password, confirmPassword } = req.body;
+    const { username, email, password } = req.body;
 
     // 🔹 Kiểm tra xem các trường có đầy đủ không
-    if (!username || !email || !password || !confirmPassword) {
+    if (!username || !email || !password ) {
         return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ thông tin" });
     }
 
-    // 🔹 Kiểm tra mật khẩu nhập lại có đúng không
-    if (password !== confirmPassword) {
-        return res.status(400).json({ message: "Mật khẩu xác nhận không khớp" });
-    }
 
     try {
         // 🔹 Kiểm tra username hoặc email đã tồn tại chưa
@@ -100,7 +95,7 @@ const register = async (req, res) => {
 const verifyAccount = async (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) {
-        return res.status(400).json({ message: "Vui lòng cung cấp email và mã OTP" });
+        return res.status(400).json({ message: "Vui lòng xác nhận mã OTP" });
     }
 
     try {
