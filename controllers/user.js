@@ -204,31 +204,31 @@ const resetPassword = async (req, res) => {
 };
 
 const uploadAvatar = async (req, res) => {
-    try {
-        const { userId } = req.params;
+    // try {
+    //     const { userId } = req.params;
 
-        if (!req.file) {
-            return res.status(400).json({ error: "Vui lòng chọn ảnh để upload!" });
-        }
+    //     if (!req.file) {
+    //         return res.status(400).json({ error: "Vui lòng chọn ảnh để upload!" });
+    //     }
 
-        // Lưu ảnh tạm vào file buffer
-        const fileBuffer = `data:image/jpeg;base64,${req.file.buffer.toString("base64")}`;
+    //     // Lưu ảnh tạm vào file buffer
+    //     const fileBuffer = `data:image/jpeg;base64,${req.file.buffer.toString("base64")}`;
 
-        // Upload ảnh lên Cloudinary
-        const result = await cloudinary.uploader.upload(fileBuffer, {
-            folder: "avatars", 
-        });
+    //     // Upload ảnh lên Cloudinary
+    //     const result = await cloudinary.uploader.upload(fileBuffer, {
+    //         folder: "avatars", 
+    //     });
 
-         // Cập nhật URL avatar vào MongoDB
-         const user = await User.findByIdAndUpdate(userId, 
-            { avatar: result.secure_url, updatedAt: new Date() }, 
-            { new: true }
-        ).select("_id username email avatar updatedAt");
+    //      // Cập nhật URL avatar vào MongoDB
+    //      const user = await User.findByIdAndUpdate(userId, 
+    //         { avatar: result.secure_url, updatedAt: new Date() }, 
+    //         { new: true }
+    //     ).select("_id username email avatar updatedAt");
 
-        return res.json({ message: "Upload thành công", user });
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
-    }
+    //     return res.json({ message: "Upload thành công", user });
+    // } catch (error) {
+    //     return res.status(500).json({ error: error.message });
+    // }
 };
 module.exports = {
     getUserByUsername,
