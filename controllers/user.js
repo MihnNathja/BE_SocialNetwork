@@ -1,4 +1,5 @@
 const User = require("../models/user"); // Import User model từ Mongoose
+const Post = require("../models/post");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const { sendMail } = require("../utils/mail");
@@ -19,6 +20,36 @@ const getUserByUsername = async (req, res) => {
         return res.status(500).json({ message: "Đã xảy ra lỗi khi lấy dữ liệu người dùng" });
     }
 };
+const getProfile = async (req, res) => {
+    try {
+      const { userId } = req.params;
+      // Tìm user theo ID
+      const user = await User.findById(userId).select("profile avatar friends bio favoriteTags");
+  
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+  
+      // Đếm số bài viết của user
+      const postsCount = await Post.countDocuments({ userid: userId });
+  
+      // Chuẩn bị dữ liệu trả về
+      const responseData = {
+        id: user._id,
+        fullname: user.profile.name,
+        avatar: user.profile.avatar,
+        friendsCount: user.friends.length,
+        postsCount: postsCount, // Số lượng bài viết
+        bio: user.profile.bio,
+        favoriteTags: user.profile.favoriteTag || []
+      };
+  
+      res.status(200).json(responseData);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  };
 
 // 📌 Đăng nhập người dùng
 const login = async (req, res) => {
@@ -239,4 +270,5 @@ module.exports = {
     verifyOTP,
     resetPassword,
     uploadAvatar,
+    getProfile,
 };
