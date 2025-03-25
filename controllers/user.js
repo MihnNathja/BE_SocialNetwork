@@ -24,7 +24,7 @@ const getProfile = async (req, res) => {
     try {
       const { userId } = req.params;
       // Tìm user theo ID
-      const user = await User.findById(userId).select("profile avatar friends bio favoriteTags");
+      const user = await User.findById(userId).select("username profile avatar friends bio favoriteTags");
   
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -36,6 +36,7 @@ const getProfile = async (req, res) => {
       // Chuẩn bị dữ liệu trả về
       const responseData = {
         id: user._id,
+        username: user.username,
         fullname: user.profile.name,
         avatar: user.profile.avatar,
         friendsCount: user.friends.length,
@@ -234,6 +235,70 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const updateProfile = async (req, res) => {
+    try {
+        const { userId, fullname, bio } = req.body;
+        let avatarUrl = null;
+
+        // Nếu có file ảnh thì upload lên Cloudinary
+        if (req.file) {
+            try {
+                avatarUrl = await uploadImageToCloudinary(req.file);
+            } catch (error) {
+                return res.status(500).json({ error: "Lỗi upload ảnh!" });
+            }
+        }
+
+        // Cập nhật thông tin user
+        await updateUserProfile(userId, fullname, bio, avatarUrl, res);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Lỗi server!" });
+    }
+};
+
+// Upload ảnh lên Cloudinary
+const uploadImageToCloudinary = (file) => {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            { folder: "avatars" },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve(result.secure_url);
+            }
+        );
+        stream.end(file.buffer);
+    });
+};
+
+// Cập nhật user vào database
+async function updateUserProfile(userId, fullname, bio, avatarUrl, res) {
+    try {
+        const updateData = {};
+        if (fullname) updateData["profile.name"] = fullname;
+        if (bio) updateData["profile.bio"] = bio;
+        if (avatarUrl) updateData["profile.avatar"] = avatarUrl;
+
+        const user = await User.findByIdAndUpdate(userId, updateData, { new: true });
+
+        if (!user) return res.status(404).json({ error: "Người dùng không tồn tại!" });
+
+        res.json({
+            message: "Cập nhật thành công!",
+            user: {
+                fullname: user.profile.name,
+                bio: user.profile.bio,
+                avatar: user.profile.avatar,
+            }
+        });
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Lỗi cập nhật thông tin!" });
+    }
+}
+
+
 const uploadAvatar = async (req, res) => {
     // try {
     //     const { userId } = req.params;
@@ -271,4 +336,5 @@ module.exports = {
     resetPassword,
     uploadAvatar,
     getProfile,
+    updateProfile,
 };

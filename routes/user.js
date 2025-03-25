@@ -10,6 +10,6 @@ router.post('/verifyAccount', ctrls.verifyAccount);
 router.post('/forgot-password', ctrls.forgotPassword);
 router.post('/verifyOTP', ctrls.verifyOTP);
 router.post('/reset-password', ctrls.resetPassword);
-router.post("/upload-avatar/:userId", upload.single("image"), ctrls.uploadAvatar);
+router.put("/update-profile", upload.single("file"), ctrls.updateProfile);
 
 module.exports = router
