@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   otp: { type: String, default: null },
   otpExpiresAt: { type: Date, default: null },
+  isOnline: { type: Boolean, default: false }, // Trạng thái online
+  lastSeen: { type: Date, default: Date.now },  // Lần cuối online
 
   profile: {
     name: { type: String, default: "" },
