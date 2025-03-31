@@ -8,24 +8,22 @@ module.exports = (io) => {
         socket.on("user_connected", (userId) => {
             onlineUsers[userId] = socket.id;  // Lưu userId và socketId
             console.log(`User ${userId} is online`);
-            io.emit("update_online_users", Object.keys(onlineUsers));  // Cập nhật danh sách user online cho tất cả các client
+            
+            // Gửi danh sách online cho user mới kết nối
+            socket.emit("update_online_users", Object.keys(onlineUsers));
+            
+            // Gửi thông báo cho các user khác
+            socket.broadcast.emit("user_status_change", userId, true);
+            
+            // Cập nhật danh sách cho tất cả
+            io.emit("update_online_users", Object.keys(onlineUsers));
         });
+
         // Khi nhận yêu cầu trạng thái online
         socket.on("request_online_status", () => {
-        // Gửi lại danh sách người dùng online cho client đã yêu cầu
-        const onlineUserIds = Object.keys(onlineUsers);
-        io.to(socket.id).emit("update_online_users", onlineUserIds);
-        });
-
-        // Khi user tham gia phòng chat
-        socket.on("join_conversation", (conversationId) => {
-            socket.join(conversationId);
-            console.log(`User ${socket.id} joined conversation ${conversationId}`);
-        });
-
-        // Khi nhận tin nhắn
-        socket.on("send_message", (data) => {
-            io.to(data.conversationId).emit("new_message", data);  // Phát tin nhắn cho tất cả người tham gia phòng chat
+            // Gửi lại danh sách người dùng online cho client đã yêu cầu
+            const onlineUserIds = Object.keys(onlineUsers);
+            socket.emit("update_online_users", onlineUserIds);
         });
 
         // Khi user ngắt kết nối
@@ -36,13 +34,15 @@ module.exports = (io) => {
             Object.keys(onlineUsers).forEach(userId => {
                 if (onlineUsers[userId] === socket.id) {
                     disconnectedUser = userId;
-                    delete onlineUsers[userId];  // Xóa user khỏi danh sách online
+                    delete onlineUsers[userId];
                 }
             });
 
             if (disconnectedUser) {
                 console.log(`User ${disconnectedUser} disconnected`);
-                io.emit("update_online_users", Object.keys(onlineUsers));  // Cập nhật lại danh sách user online sau khi ngắt kết nối
+                // Gửi thông báo cho tất cả các client
+                io.emit("user_status_change", disconnectedUser, false);
+                io.emit("update_online_users", Object.keys(onlineUsers));
             }
         });
     });
