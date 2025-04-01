@@ -17,7 +17,7 @@ const getChatList = async (req, res) => {
             // Lấy người tham gia khác
             const otherUserId = conv.participants.find(id => id.toString() !== userId);
             const otherUser = await User.findById(otherUserId, "profile.name profile.avatar isOnline lastSeen");
-
+            
             return {
                 conversationId: conv._id,
                 user: {
@@ -33,7 +33,9 @@ const getChatList = async (req, res) => {
                         .tz("Asia/Ho_Chi_Minh") // Chuyển về múi giờ Việt Nam
                         .format("hh:mm A") // Định dạng 12 giờ với AM/PM
                 },
-                unreadMessages: conv.unread_messages[userId] || 0
+                //unreadMessages: conv.unread_messages[userId] || 0
+                unreadMessages: conv.unread_messages.get(userId.toString()) || 0
+
             };
         }));
 
