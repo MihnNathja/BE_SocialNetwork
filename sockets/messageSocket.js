@@ -2,6 +2,7 @@
 const Message = require('../models/message');
 const User = require('../models/user');
 const Conversation = require('../models/conversation');
+const moment = require('moment-timezone');
 
 const messageSocket = (io) => {
     const onlineUsers = new Map(); // Lưu trữ socket.id của users đang online
@@ -49,18 +50,26 @@ const messageSocket = (io) => {
                     sender_id: sender.id, // Lấy ID từ object sender
                     content,
                     message_type,
-                    timestamp: new Date(timestamp), // Chuyển đổi timestamp từ client
-                    
+                    //timestamp: new Date(timestamp), // Chuyển đổi timestamp từ client
+                    timestamp: new Date(parseInt(timestamp)),
                 });
-        
-                // Cập nhật conversation với tin nhắn mới nhất
+    
+                // await Conversation.findByIdAndUpdate(conversation_id, {
+                //     last_message: {
+                //         content,
+                //         sender_id: sender.id,
+                //         timestamp: new Date(parseInt(timestamp)),
+                //         message_type,
+                //     }
+                // });
+                const lastMessageContent = message_type === 'image' ? 'Đã gửi một hình ảnh' : content;
                 await Conversation.findByIdAndUpdate(conversation_id, {
-                    last_message: {
-                        content,
-                        sender_id: sender.id,
-                        timestamp: new Date(timestamp),
-                        message_type,
-                    }
+                last_message: {
+                    content: lastMessageContent,
+                    sender_id: sender.id,
+                timestamp: new Date(parseInt(timestamp)),
+                message_type,
+                 }
                 });
 
                 // Lấy thông tin người gửi từ database
@@ -70,23 +79,19 @@ const messageSocket = (io) => {
                 io.to(conversation_id).emit('new_message', {
                     id: newMessage._id,
                     conversation_id: newMessage.conversation_id,
-                    // sender_id: {
-                    //     _id: sender.id,
-                    //     username: sender.username,
-                    //     name: sender.name,
-                    //     avatar: sender.avatar
-                    // },
                     sender_id: {
                         _id: senderInfo._id,
                         username: senderInfo.username,
-                        name: senderInfo.profile.name,     // Lấy name từ profile
-                        avatar: senderInfo.profile.avatar  // Lấy avatar từ profile
+                        name: senderInfo.profile.name,    
+                        avatar: senderInfo.profile.avatar 
                     },
                     content: newMessage.content,
                     message_type: newMessage.message_type,
-                    timestamp: newMessage.timestamp,
+                    //timestamp: newMessage.timestamp,
+                    timestamp: formatTimestamp(newMessage.createdAt),
                     createdAt: newMessage.createdAt
                 });
+                
         
             } catch (error) {
                 console.error('Socket send message error:', error);
@@ -96,8 +101,6 @@ const messageSocket = (io) => {
                 });
             }
         });
-
-        // Mark messages as read
         socket.on('mark_read', async ({ conversation_id, user_id }) => {
             try {
                 await Message.updateMany(
@@ -117,8 +120,6 @@ const messageSocket = (io) => {
                 console.error('Mark read error:', error);
             }
         });
-
-        // Handle disconnect
         socket.on('disconnect', () => {
             for (const [userId, socketId] of onlineUsers.entries()) {
                 if (socketId === socket.id) {
@@ -133,6 +134,12 @@ const messageSocket = (io) => {
             console.log('Message socket disconnected:', socket.id);
         });
     });
+};
+
+const formatTimestamp = (date) => {
+    return moment(date)
+        .tz('Asia/Ho_Chi_Minh')
+        .format('HH:mm - DD/MM/YYYY');
 };
 
 module.exports = messageSocket;

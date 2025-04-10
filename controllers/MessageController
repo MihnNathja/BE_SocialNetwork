@@ -1,7 +1,9 @@
 const Message = require('../models/message');
+const User = require('../models/user');
 const Conversation = require('../models/conversation');
 const cloudinary = require('../config/cloudinary');
 const mongoose = require("mongoose");
+const moment = require('moment-timezone');
 
 class MessageController {
     // Lấy tin nhắn của một conversation
@@ -14,7 +16,7 @@ class MessageController {
                 conversation_id,
                 is_deleted: false
             })
-            .sort({ timestamp: -1 })
+            .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .populate({
@@ -31,6 +33,9 @@ class MessageController {
             // Map lại sender_id để đưa name và avatar ra ngoài
             const formattedMessages = messages.map(msg => {
                 const sender = msg.sender_id;
+                const formattedTimestamp = moment(msg.createdAt)
+                    .tz('Asia/Ho_Chi_Minh') // Chuyển sang múi giờ Asia/Ho_Chi_Minh
+                    .format('HH:mm - DD/MM/YYYY'); // Định dạng thời gian theo ý muốn
                 return {
                     ...msg.toObject(),
                     sender_id: {
@@ -38,7 +43,8 @@ class MessageController {
                         username: sender.username,
                         name: sender.profile?.name || "",
                         avatar: sender.profile?.avatar || ""
-                    }
+                    },
+                    timestamp: formattedTimestamp
                 };
             });
 
@@ -124,54 +130,84 @@ class MessageController {
                 bufferStream.pipe(stream);
             });
     
+            // Lấy thông tin sender
+            const sender = await User.findById(sender_id)
+                .select('_id username profile.name profile.avatar');
+
+            // Lưu message vào database
             const newMessage = await Message.create({
                 conversation_id,
-                sender_id,
-                content: 'Đã gửi một hình ảnh',
-                image_url: result.secure_url,
+                sender_id: sender._id,
+                content: result.secure_url,
                 message_type: 'image'
             });
-    
+            const senderInfo = await User.findById(sender.id).select('_id username profile.name profile.avatar');
             // Update last message trong conversation
             await Conversation.findByIdAndUpdate(conversation_id, {
                 last_message: {
                     content: 'Đã gửi một hình ảnh',
-                    sender_id,
+                    sender_id: sender._id,
                     timestamp: new Date(),
                     message_type: 'image'
                 }
             });
-    
-            // Populate sender info với profile
+
+            // Populate sender info với đầy đủ thông tin
             await newMessage.populate({
                 path: 'sender_id',
-                select: '_id username profile',
-                populate: {
-                    path: 'profile',
-                    select: 'name avatar -_id'
-                }
+                select: '_id username profile.name profile.avatar'
             });
-    
-            // Transform message để flatten profile
-            const messageObj = newMessage.toObject();
-            if (messageObj.sender_id && messageObj.sender_id.profile) {
-                messageObj.sender_id = {
-                    _id: messageObj.sender_id._id,
-                    username: messageObj.sender_id.username,
-                    name: messageObj.sender_id.profile.name,
-                    avatar: messageObj.sender_id.profile.avatar
-                };
-            }
-    
-            // Emit socket event nếu có socket
+
+            // Transform message để có cùng format với text message
+            // const messageObj = newMessage.toObject();
+            // if (messageObj.sender_id && messageObj.sender_id.profile) {
+            //     messageObj.sender_id = {
+            //         _id: messageObj.sender_id._id,
+            //         username: messageObj.sender_id.username,
+            //         name: messageObj.sender_id.profile.name,
+            //         avatar: messageObj.sender_id.profile.avatar
+            //     };
+            // }
+            // messageObj.timestamp = formatTimestamp(messageObj.createdAt);
+            const messageObj = {
+                id: newMessage._id,
+                conversation_id: newMessage.conversation_id,
+                sender_id: {
+                    _id: senderInfo._id,
+                    username: senderInfo.username,
+                    name: senderInfo.profile.name,    
+                    avatar: senderInfo.profile.avatar 
+                },
+                content: newMessage.content,
+                message_type: newMessage.message_type,
+                timestamp: formatTimestamp(newMessage.createdAt),
+                createdAt: newMessage.createdAt
+            };
+            // Debug log
+            console.log('Socket IO object:', req.io ? 'exists' : 'not exists');
+            console.log('Emitting message:', messageObj);
+            console.log('To conversation:', conversation_id);
+
+            // Emit socket event giống như text message
             if (req.io) {
-                req.io.to(conversation_id).emit('new_message', messageObj);
+                // Emit to both default namespace and /message namespace
+                //req.io.to(conversation_id).emit('new_message', messageObj);
+                req.io.of('/message').to(conversation_id).emit('new_message', messageObj);
+                //req.io.emit('new_message', messageObj);
+                //req.io.of('/message').emit('new_message', messageObj);
             }
-    
-            res.status(201).json(messageObj);
+
+            res.status(201).json({
+                success: true,
+                data: messageObj
+            });
+        
         } catch (error) {
             console.error('Send image message error:', error);
-            res.status(500).json({ message: 'Lỗi upload ảnh' });
+        res.status(500).json({ 
+            success: false,
+            message: 'Lỗi upload ảnh: ' + error.message 
+        });
         }
     }
 
@@ -201,5 +237,11 @@ class MessageController {
         }
     }
 }
+
+const formatTimestamp = (date) => {
+    return moment(date)
+        .tz('Asia/Ho_Chi_Minh')
+        .format('HH:mm - DD/MM/YYYY');
+};
 
 module.exports = new MessageController();
