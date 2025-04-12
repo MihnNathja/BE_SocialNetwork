@@ -101,7 +101,7 @@ const messageSocket = (io) => {
         socket.on('mark_read', async (data) => {
             try {
                 const { conversationid, userid} = data;
-                console.log(userid)
+                //console.log(userid)
                 await Conversation.findByIdAndUpdate(conversationid, {
                     $set: {
                         [`unread_messages.${userid}`]: 0
@@ -122,7 +122,7 @@ const messageSocket = (io) => {
                     break;
                 }
             }
-            console.log('Message socket disconnected:', socket.id);
+            //console.log('Message socket disconnected:', socket.id);
         });
     });
 };

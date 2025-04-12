@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const MessageController = require('../controllers/MessageController');
+const MessageController = require('../controllers/MessageController.js');
 const upload = require('../middlewares/multer2');
 
 // Lấy tin nhắn của một conversation

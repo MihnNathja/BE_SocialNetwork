@@ -18,7 +18,12 @@ const userSchema = new mongoose.Schema({
   },
 
   // Danh sách bạn bè
-  friends: { type: [mongoose.Schema.Types.ObjectId], ref: "User", default: [] },
+  friends: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: []
+  }],
+  
   },
   { timestamps: true }
 );

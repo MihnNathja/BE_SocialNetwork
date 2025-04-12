@@ -8,6 +8,7 @@ const db = {
   Post,
   Message,
   Conversation,
+  Post
 };
 
 module.exports = db;

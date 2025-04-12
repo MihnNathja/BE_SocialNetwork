@@ -8,16 +8,46 @@ const PostSchema = new mongoose.Schema(
             pictures: [{ type: String, required: true }],
         },
         userid: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-        created_at: { type: Date, default: Date.now },
         isStory: { type: Boolean, default: false },
         location: { type: String },
-        reactions: [
-            {
-                userid: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-                type: { type: String, enum: ["like", "love", "haha", "wow", "sad", "angry"] },
-                updated_at: { type: Date, default: Date.now },
-            },
-        ],
+        reaction: {
+            like: [{
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'User',
+              default: []
+            }],
+            love: [{
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'User',
+              default: []
+            }],
+            haha: [{
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'User',
+              default: []
+            }],
+            heart: [{
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                default: []
+            }],
+            wow: [{
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'User',
+              default: []
+            }],
+            sad: [{
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'User',
+              default: []
+            }],
+            angry: [{
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'User',
+              default: []
+            }],
+            // Thêm các loại cảm xúc khác nếu muốn
+          },
     },
     { timestamps: true } // Thêm timestamps để có createdAt và updatedAt tự động
 );
