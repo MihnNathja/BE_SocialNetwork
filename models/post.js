@@ -10,7 +10,7 @@ const PostSchema = new mongoose.Schema(
         userid: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         isStory: { type: Boolean, default: false },
         location: { type: String },
-        reaction: {
+        reactions: {
             like: [{
               type: mongoose.Schema.Types.ObjectId,
               ref: 'User',

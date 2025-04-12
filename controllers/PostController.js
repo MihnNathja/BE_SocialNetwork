@@ -21,15 +21,27 @@ const getFriendPosts = async (req, res) => {
       .sort({ createdAt: -1 }) // Bài mới nhất lên đầu
       .lean();
 
-      const formattedPosts = posts.map(post => {
-        const vietnamTime = moment(post.createdAt)
-          .tz("Asia/Ho_Chi_Minh")
-          .format("HH:mm DD/MM/YYYY");
-        
-          // Đổi profile.avatar -> avatar
+      // 3. Format bài viết và gán myReaction
+    const formattedPosts = posts.map(post => {
+      const vietnamTime = moment(post.createdAt)
+        .tz("Asia/Ho_Chi_Minh")
+        .format("HH:mm DD/MM/YYYY");
+
       const avatar = post.userid?.profile?.avatar || null;
       const name = post.userid?.profile?.name || "Unknown";
       const _id = post.userid?._id || null;
+
+      // Tìm cảm xúc hiện tại của user này với bài viết
+      let myReaction = null;
+      if (post.reactions) {
+        for (const [key, userIds] of Object.entries(post.reactions)) {
+          if (userIds.map(String).includes(userId)) {
+            myReaction = mapReactionKeyToLabel(key);
+            break;
+          }
+        }
+      }
+
       return {
         ...post,
         userid: {
@@ -37,16 +49,115 @@ const getFriendPosts = async (req, res) => {
           name,
           avatar
         },
-        createdAt: vietnamTime
+        createdAt: vietnamTime,
+        myReaction
       };
     });
-  
-      res.status(200).json(formattedPosts);
+
+    res.status(200).json(formattedPosts);
   } catch (err) {
     console.error("Error fetching friend posts:", err);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+const addOrUpdateReaction = async (req, res) => {
+  const { postId } = req.params;
+  const { userId, reaction } = req.body;
+
+  try {
+    const englishReaction = reactionMap[reaction] || "like";  // Nếu không có trong map, mặc định là "like"
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // Xoá userId khỏi tất cả các reaction cũ (nếu có)
+    for (const key in post.reactions) {
+        if (Array.isArray(post.reactions[key])) {
+            post.reactions[key] = post.reactions[key].filter(id => id.toString() !== userId.toString());
+        }
+    }
+
+    // Thêm userId vào reaction mới
+    if (!Array.isArray(post.reactions[englishReaction])) {
+      post.reactions[reacenglishReactiontion] = [];  // Khởi tạo nếu chưa có mảng
+    }
+    post.reactions[englishReaction].push(userId);
+
+    await post.save();
+    res.status(200).json({ message: "Reaction updated" });
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+  }
+};
+const deleteReaction = async (req, res) => {
+  const { postId } = req.params;
+  const { userId } = req.query;
+  console.log(postId);
+  console.log(userId);
+
+  try {
+  // Lấy bài viết từ database
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    return res.status(404).json({ message: "Post not found" });
+  }
+
+// Lặp qua tất cả các loại reaction để tìm reaction của userId
+let reactionFound = false;
+for (const [reaction, userIds] of Object.entries(post.reactions)) {
+  const userIndex = userIds.indexOf(userId);
+
+  if (userIndex !== -1) {
+    // Nếu tìm thấy userId trong reaction, xóa userId khỏi mảng
+    userIds.splice(userIndex, 1);
+    post.reactions[reaction] = userIds;  // Cập nhật lại mảng reaction
+
+    reactionFound = true;  // Đánh dấu là đã tìm thấy và xóa thành công
+    break;
+  }
+}
+
+if (!reactionFound) {
+  return res.status(400).json({ message: "Reaction not found for this user" });
+}
+
+// Lưu bài viết đã cập nhật
+await post.save();
+
+return res.status(200).json({ message: "Reaction removed successfully" });
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Hàm chuyển key -> label tiếng Việt
+function mapReactionKeyToLabel(key) {
+  const map = {
+    like: "Thích",
+    love: "Thương",
+    haha: "Haha",
+    wow: "Wow",
+    sad: "Buồn",
+    angry: "Giận",
+    heart: "Tim" // nếu có dùng
+  };
+  return map[key] || null;
+}
+
+const reactionMap = {
+  "Thích": "like",
+  "Thương": "love",
+  "Haha": "haha",
+  "Tim": "heart",
+  "Wow": "wow",
+  "Buồn": "sad",
+  "Giận": "angry"
+};
 module.exports = {
   getFriendPosts,
+  addOrUpdateReaction,
+  deleteReaction
 };
