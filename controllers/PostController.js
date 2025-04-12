@@ -93,8 +93,6 @@ const addOrUpdateReaction = async (req, res) => {
 const deleteReaction = async (req, res) => {
   const { postId } = req.params;
   const { userId } = req.query;
-  console.log(postId);
-  console.log(userId);
 
   try {
   // Lấy bài viết từ database
@@ -133,6 +131,57 @@ return res.status(200).json({ message: "Reaction removed successfully" });
   }
 };
 
+const getMyPosts = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const posts = await Post.find({ userid: userId })
+      .populate({
+        path: "userid",
+        select: "_id profile.name profile.avatar"
+      })
+      .sort({ createdAt: -1 }) // Bài mới nhất lên đầu
+      .lean();
+
+      // 3. Format bài viết và gán myReaction
+    const formattedPosts = posts.map(post => {
+      const vietnamTime = moment(post.createdAt)
+        .tz("Asia/Ho_Chi_Minh")
+        .format("HH:mm DD/MM/YYYY");
+
+      const avatar = post.userid?.profile?.avatar || null;
+      const name = post.userid?.profile?.name || "Unknown";
+      const _id = post.userid?._id || null;
+
+      // Tìm cảm xúc hiện tại của user này với bài viết
+      let myReaction = null;
+      if (post.reactions) {
+        for (const [key, userIds] of Object.entries(post.reactions)) {
+          if (userIds.map(String).includes(userId)) {
+            myReaction = mapReactionKeyToLabel(key);
+            break;
+          }
+        }
+      }
+
+      return {
+        ...post,
+        userid: {
+          _id,
+          name,
+          avatar
+        },
+        createdAt: vietnamTime,
+        myReaction
+      };
+    });
+
+    res.status(200).json(formattedPosts);
+  } catch (err) {
+    console.error("Error fetching friend posts:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 // Hàm chuyển key -> label tiếng Việt
 function mapReactionKeyToLabel(key) {
   const map = {
@@ -159,5 +208,6 @@ const reactionMap = {
 module.exports = {
   getFriendPosts,
   addOrUpdateReaction,
-  deleteReaction
+  deleteReaction,
+  getMyPosts
 };
