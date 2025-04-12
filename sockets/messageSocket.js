@@ -44,38 +44,36 @@ const messageSocket = (io) => {
             try {
                 const { conversation_id, sender, content, message_type, timestamp } = messageData;
         
-                // Tạo tin nhắn mới với thông tin từ client
                 const newMessage = await Message.create({
                     conversation_id,
                     sender_id: sender.id, // Lấy ID từ object sender
                     content,
                     message_type,
-                    //timestamp: new Date(timestamp), // Chuyển đổi timestamp từ client
                     timestamp: new Date(parseInt(timestamp)),
                 });
+                // Lấy thông tin cuộc trò chuyện từ cơ sở dữ liệu
+                const conversation = await Conversation.findById(conversation_id);
+
+                // Tìm ID của người nhận (người không phải là sender)
+                const receiverId = conversation.participants.find(participantId => participantId !== sender.id);
     
-                // await Conversation.findByIdAndUpdate(conversation_id, {
-                //     last_message: {
-                //         content,
-                //         sender_id: sender.id,
-                //         timestamp: new Date(parseInt(timestamp)),
-                //         message_type,
-                //     }
-                // });
                 const lastMessageContent = message_type === 'image' ? 'Đã gửi một hình ảnh' : content;
                 await Conversation.findByIdAndUpdate(conversation_id, {
-                last_message: {
-                    content: lastMessageContent,
-                    sender_id: sender.id,
-                timestamp: new Date(parseInt(timestamp)),
-                message_type,
-                 }
+                    $set: {
+                        last_message: {
+                          content: lastMessageContent,
+                          sender_id: sender.id,
+                          timestamp: newMessage.createdAt,
+                          message_type: message_type,
+                        },
+                        updatedAt: new Date()
+                      },
+                    $inc: {
+                        [`unread_messages.${receiverId}`]: 1
+                      }
                 });
-
-                // Lấy thông tin người gửi từ database
                 const senderInfo = await User.findById(sender.id).select('_id username profile.name profile.avatar');
         
-                // Gửi tin nhắn mới đến tất cả client trong room
                 io.to(conversation_id).emit('new_message', {
                     id: newMessage._id,
                     conversation_id: newMessage.conversation_id,
@@ -87,7 +85,6 @@ const messageSocket = (io) => {
                     },
                     content: newMessage.content,
                     message_type: newMessage.message_type,
-                    //timestamp: newMessage.timestamp,
                     timestamp: formatTimestamp(newMessage.createdAt),
                     createdAt: newMessage.createdAt
                 });
@@ -101,20 +98,14 @@ const messageSocket = (io) => {
                 });
             }
         });
-        socket.on('mark_read', async ({ conversation_id, user_id }) => {
+        socket.on('mark_read', async (data) => {
             try {
-                await Message.updateMany(
-                    {
-                        conversation_id,
-                        sender_id: { $ne: user_id },
-                        status: { $ne: 'read' }
-                    },
-                    { status: 'read' }
-                );
-
-                io.to(conversation_id).emit('messages_read', {
-                    conversation_id,
-                    reader_id: user_id
+                const { conversationid, userid} = data;
+                console.log(userid)
+                await Conversation.findByIdAndUpdate(conversationid, {
+                    $set: {
+                        [`unread_messages.${userid}`]: 0
+                    }
                 });
             } catch (error) {
                 console.error('Mark read error:', error);

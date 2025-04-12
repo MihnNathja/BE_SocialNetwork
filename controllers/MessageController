@@ -158,17 +158,7 @@ class MessageController {
                 select: '_id username profile.name profile.avatar'
             });
 
-            // Transform message để có cùng format với text message
-            // const messageObj = newMessage.toObject();
-            // if (messageObj.sender_id && messageObj.sender_id.profile) {
-            //     messageObj.sender_id = {
-            //         _id: messageObj.sender_id._id,
-            //         username: messageObj.sender_id.username,
-            //         name: messageObj.sender_id.profile.name,
-            //         avatar: messageObj.sender_id.profile.avatar
-            //     };
-            // }
-            // messageObj.timestamp = formatTimestamp(messageObj.createdAt);
+          
             const messageObj = {
                 id: newMessage._id,
                 conversation_id: newMessage.conversation_id,
@@ -183,18 +173,10 @@ class MessageController {
                 timestamp: formatTimestamp(newMessage.createdAt),
                 createdAt: newMessage.createdAt
             };
-            // Debug log
-            console.log('Socket IO object:', req.io ? 'exists' : 'not exists');
-            console.log('Emitting message:', messageObj);
-            console.log('To conversation:', conversation_id);
-
-            // Emit socket event giống như text message
+           
             if (req.io) {
-                // Emit to both default namespace and /message namespace
-                //req.io.to(conversation_id).emit('new_message', messageObj);
                 req.io.of('/message').to(conversation_id).emit('new_message', messageObj);
-                //req.io.emit('new_message', messageObj);
-                //req.io.of('/message').emit('new_message', messageObj);
+            
             }
 
             res.status(201).json({
