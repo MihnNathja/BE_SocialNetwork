@@ -205,9 +205,59 @@ const reactionMap = {
   "Buồn": "sad",
   "Giận": "angry"
 };
+
+const getPostByID = async (req, res) => {
+  try {
+    const postId = req.params.postId;
+
+    // Tìm bài viết theo ID, chắc chắn bài viết tồn tại
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Format bài viết và gán myReaction
+    const vietnamTime = moment(post.createdAt)
+      .tz("Asia/Ho_Chi_Minh")
+      .format("HH:mm DD/MM/YYYY");
+
+    const avatar = post.userid?.profile?.avatar || null;
+    const name = post.userid?.profile?.name || "Unknown";
+    const _id = post.userid?._id || null;
+
+    // Tìm cảm xúc hiện tại của user này với bài viết
+    let myReaction = null;
+    if (post.reactions) {
+      for (const [key, userIds] of Object.entries(post.reactions)) {
+        if (userIds.map(String).includes(userId)) {
+          myReaction = mapReactionKeyToLabel(key);
+          break;
+        }
+      }
+    }
+
+    const formattedPost = {
+      ...post._doc,  // Chuyển đổi mongoose document thành object thường
+      userid: {
+        _id,
+        name,
+        avatar
+      },
+      createdAt: vietnamTime,
+      myReaction
+    };
+
+    res.status(200).json(formattedPost);
+  } catch (err) {
+    console.error("Error fetching post:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   getFriendPosts,
   addOrUpdateReaction,
   deleteReaction,
-  getMyPosts
+  getMyPosts,
+  getPostByID
 };
