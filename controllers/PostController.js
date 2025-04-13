@@ -209,6 +209,7 @@ const reactionMap = {
 const getPostByID = async (req, res) => {
   try {
     const postId = req.params.postId;
+    const userId = req.user?.id || req.query.userId || req.body.userId;
 
     // Tìm bài viết theo ID, chắc chắn bài viết tồn tại
     const post = await Post.findById(postId);
