@@ -1,6 +1,7 @@
 const Post = require("../models/post");
 const User = require("../models/user");
 const moment = require("moment-timezone");
+const mongoose = require("mongoose");
 
 const getFriendPosts = async (req, res) => {
   try {
@@ -10,7 +11,10 @@ const getFriendPosts = async (req, res) => {
     const user = await User.findById(userId).lean();
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const friendIds = user.friends;
+    //const friendIds = user.friends.accepted;
+    const friendIds = (user.friends?.accepted || []).map(id => new mongoose.Types.ObjectId(id));
+    console.log("Friend IDs:", friendIds);
+
 
     // 2. Lấy post của bạn bè
     const posts = await Post.find({ userid: { $in: friendIds } })

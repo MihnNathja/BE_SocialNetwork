@@ -39,7 +39,7 @@ const getProfile = async (req, res) => {
         username: user.username,
         name: user.profile.name,
         avatar: user.profile.avatar,
-        friendsCount: user.friends.length,
+        friendsCount: user.friends.accepted.length,
         postsCount: postsCount, // Số lượng bài viết
         bio: user.profile.bio,
         favoriteTags: user.profile.favoriteTag || []
