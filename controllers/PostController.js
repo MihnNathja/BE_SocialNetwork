@@ -10,7 +10,7 @@ const getFriendPosts = async (req, res) => {
     const user = await User.findById(userId).lean();
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const friendIds = user.friends;
+    const friendIds = user.friends.accepted;
 
     // 2. Lấy post của bạn bè
     const posts = await Post.find({ userid: { $in: friendIds } })
