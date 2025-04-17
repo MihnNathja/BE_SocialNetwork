@@ -130,7 +130,6 @@ return res.status(200).json({ message: "Reaction removed successfully" });
       res.status(500).json({ message: "Server error" });
   }
 };
-
 const getMyPosts = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -209,7 +208,7 @@ const reactionMap = {
 const getPostByID = async (req, res) => {
   try {
     const postId = req.params.postId;
-    const userId = req.user?.id || req.query.userId || req.body.userId;
+    const userId = req.params.userId;
 
     // Tìm bài viết theo ID, chắc chắn bài viết tồn tại
     const post = await Post.findById(postId);
