@@ -6,6 +6,6 @@ router.get("/:userId", ctrls.getFriendPosts);
 router.post("/reaction/:postId", ctrls.addOrUpdateReaction);
 router.delete("/reaction/:postId", ctrls.deleteReaction);
 router.get("/myPosts/:userId", ctrls.getMyPosts);
-router.get("/postDetail/:postId", ctrls.getPostByID);
+router.get("/postDetail", ctrls.getPostByID);
 
 module.exports = router;

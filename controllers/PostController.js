@@ -13,7 +13,6 @@ const getFriendPosts = async (req, res) => {
 
     //const friendIds = user.friends.accepted;
     const friendIds = (user.friends?.accepted || []).map(id => new mongoose.Types.ObjectId(id));
-    console.log("Friend IDs:", friendIds);
 
 
     // 2. Lấy post của bạn bè
@@ -211,8 +210,7 @@ const reactionMap = {
 
 const getPostByID = async (req, res) => {
   try {
-    const postId = req.params.postId;
-    const userId = req.params.userId;
+    const {postId, userId} = req.query;
 
     // Tìm bài viết theo ID, chắc chắn bài viết tồn tại
     const post = await Post.findById(postId);
