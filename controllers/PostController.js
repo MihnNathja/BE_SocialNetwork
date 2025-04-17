@@ -210,7 +210,18 @@ const reactionMap = {
 
 const getPostByID = async (req, res) => {
   try {
-    const {postId, userId} = req.query;
+    const postId = req.query.postId;
+    const userId = req.query.userId;
+
+    // Kiểm tra nếu thiếu postId hoặc userId
+    if (!postId || !userId) {
+      return res.status(400).json({ message: "postId and userId are required" });
+    }
+
+    // Kiểm tra xem postId có phải là một ObjectId hợp lệ không
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ message: "Invalid postId format" });
+    }
 
     // Tìm bài viết theo ID, chắc chắn bài viết tồn tại
     const post = await Post.findById(postId);
