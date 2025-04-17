@@ -223,8 +223,13 @@ const getPostByID = async (req, res) => {
       return res.status(400).json({ message: "Invalid postId format" });
     }
 
-    // Tìm bài viết theo ID, chắc chắn bài viết tồn tại
-    const post = await Post.findById(postId);
+    // Kiểm tra xem userId có phải là một ObjectId hợp lệ không
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId format" });
+    }
+
+    // Tìm bài viết theo ID
+    const post = await Post.findById(postId).populate('userid', 'profile.name profile.avatar');
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
@@ -242,6 +247,7 @@ const getPostByID = async (req, res) => {
     let myReaction = null;
     if (post.reactions) {
       for (const [key, userIds] of Object.entries(post.reactions)) {
+        // Kiểm tra xem userId có trong mảng người dùng thả cảm xúc
         if (userIds.map(String).includes(userId)) {
           myReaction = mapReactionKeyToLabel(key);
           break;
@@ -250,14 +256,19 @@ const getPostByID = async (req, res) => {
     }
 
     const formattedPost = {
-      ...post._doc,  // Chuyển đổi mongoose document thành object thường
-      userid: {
+      postId: post._id,  // ID bài viết
+      content: post.content,
+      isStory: post.isStory,
+      location: post.location,
+      reactions: post.reactions,
+      myReaction: myReaction,  // Cảm xúc của người dùng đối với bài viết
+      user: {
         _id,
         name,
-        avatar
+        avatar,
       },
       createdAt: vietnamTime,
-      myReaction
+      updatedAt: moment(post.updatedAt).tz("Asia/Ho_Chi_Minh").format("HH:mm DD/MM/YYYY"),
     };
 
     res.status(200).json(formattedPost);
@@ -266,6 +277,7 @@ const getPostByID = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 module.exports = {
   getFriendPosts,
