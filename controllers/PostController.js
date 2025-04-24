@@ -228,26 +228,36 @@ const getPostByID = async (req, res) => {
       return res.status(400).json({ message: "Invalid userId format" });
     }
 
-    // Tìm bài viết theo ID
-    const post = await Post.findById(postId).populate('userid', 'profile.name profile.avatar');
+    // Tìm bài viết theo ID và populate thông tin người dùng
+    const post = await Post.findById(postId)
+    .populate({
+      path: "userid",
+      select: "_id profile.name profile.avatar"
+    });
+
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    // Format bài viết và gán myReaction
+    // Kiểm tra xem thông tin người dùng có tồn tại không
+    const user = post.userid;
+    if (!user) {
+      return res.status(404).json({ message: "User not found for the post" });
+    }
+
+    // Format thời gian
     const vietnamTime = moment(post.createdAt)
       .tz("Asia/Ho_Chi_Minh")
       .format("HH:mm DD/MM/YYYY");
 
-    const avatar = post.userid?.profile?.avatar || null;
-    const name = post.userid?.profile?.name || "Unknown";
-    const _id = post.userid?._id || null;
+      const avatar = post.userid?.profile?.avatar || null;
+      const name = post.userid?.profile?.name || "Unknown";
+      const _id = post.userid?._id || null;
 
-    // Tìm cảm xúc hiện tại của user này với bài viết
+    // Tìm cảm xúc của user này đối với bài viết
     let myReaction = null;
     if (post.reactions) {
       for (const [key, userIds] of Object.entries(post.reactions)) {
-        // Kiểm tra xem userId có trong mảng người dùng thả cảm xúc
         if (userIds.map(String).includes(userId)) {
           myReaction = mapReactionKeyToLabel(key);
           break;
@@ -255,6 +265,7 @@ const getPostByID = async (req, res) => {
       }
     }
 
+    // Cấu trúc lại dữ liệu bài viết
     const formattedPost = {
       postId: post._id,  // ID bài viết
       content: post.content,
@@ -262,7 +273,7 @@ const getPostByID = async (req, res) => {
       location: post.location,
       reactions: post.reactions,
       myReaction: myReaction,  // Cảm xúc của người dùng đối với bài viết
-      user: {
+      userid: {
         _id,
         name,
         avatar,
@@ -277,6 +288,7 @@ const getPostByID = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 
 module.exports = {
