@@ -109,7 +109,7 @@ exports.likeCommentByCommentId = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
-
+// Hủy thích
 exports.unlikeCommentByCommentId = async (req, res) => {
   const { commentId } = req.params;
   const { userId } = req.query;
@@ -119,7 +119,7 @@ exports.unlikeCommentByCommentId = async (req, res) => {
     if (!comment) return res.status(404).json({ message: 'Comment không tồn tại' });
 
     // Gỡ userId khỏi danh sách
-    comment.likes = comment.likes.filter(id => id !== userId);
+    comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
     await comment.save();
 
     res.status(200).json({ message: 'Đã bỏ like' });
