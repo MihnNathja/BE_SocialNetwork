@@ -267,7 +267,7 @@ const getPostByID = async (req, res) => {
 
     // Cấu trúc lại dữ liệu bài viết
     const formattedPost = {
-      postId: post._id,  // ID bài viết
+      _id: post._id.toString(),  // ID bài viết
       content: post.content,
       isStory: post.isStory,
       location: post.location,
