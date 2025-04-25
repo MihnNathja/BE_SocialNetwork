@@ -2,13 +2,14 @@ const mongoose = require("mongoose");
 const User = require("./user");
 const Post = require("./post")
 const Message = require("./message")
-const Conversation = require("./conversation")
+const Conversation = require("./conversation");
+const Comment = require("./comment"); 
 const db = {
   User,
   Post,
   Message,
   Conversation,
-  Post
+  Comment,
 };
 
 module.exports = db;

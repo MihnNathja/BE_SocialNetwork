@@ -1,4 +1,4 @@
-const Comment = require('../models/Comment');
+const Comment = require('../models/comment');
 
 // Tạo bình luận
 exports.createCommentByPostId = async (req, res) => {
@@ -27,12 +27,11 @@ exports.getCommentsByPostId = async (req, res) => {
 
 
   try {
-    const comments = await Comment.find({ post_id: postId, is_deleted: false })
-      .populate('user_id', 'username profile')  // lấy username + profile.avatar
-      .populate('likes', '_id')
+      const comments = await Comment.find({ post_id: postId, is_deleted: false })
+      .populate('user_id', 'username profile')  
       .sort({ create_at: -1 })
       .lean();
-
+      
       const result = comments.map(c => ({
         id: c._id,
         postId: c.post_id,
@@ -41,10 +40,13 @@ exports.getCommentsByPostId = async (req, res) => {
         avatarUrl: c.user_id?.profile?.avatar || '',
         content: c.content,
         createdAt: c.create_at,
-        likes: Array.isArray(c.likes) ? c.likes.map(u => u._id) : [],
-        myLike: Array.isArray(c.likes) && c.likes.some(u => u._id?.toString() === currentUserId?.toString()), 
+      
+        likes: Array.isArray(c.likes) ? c.likes.map(id => id.toString()) : [],
+        myLike: Array.isArray(c.likes) && c.likes.some(id => id.toString() === currentUserId?.toString()),
+      
         isDeleted: c.is_deleted
       }));
+    
       
 
     res.status(200).json(result);
@@ -52,9 +54,6 @@ exports.getCommentsByPostId = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-
-
-
 
 // Xóa bình luận
 exports.deleteCommentByCommentId = async (req, res) => {
@@ -77,22 +76,40 @@ exports.deleteCommentByCommentId = async (req, res) => {
 };
 
 // Thích bình luận
-// Chỗ này cần fix cái danh sách load cho một cá nhân
 exports.likeCommentByCommentId = async (req, res) => {
-  const { post_id } = req.body;
-  const user_id = req.user.id; 
+  const { commentId } = req.params;
+  const { userId } = req.query;
 
   try {
-    const comment = new Comment({
-      post_id,
-      user_id,
-      content,
-      parent
-    });
+    const comment = await Comment.findById(commentId);
+    if (!comment) return res.status(404).json({ message: 'Comment không tồn tại' });
 
+    // Thêm userId nếu chưa có
+    if (!comment.likes.includes(userId)) {
+      comment.likes.push(userId);
+      await comment.save();
+    }
+
+    res.status(200).json({ message: 'Đã like thành công' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
+exports.unlikeCommentByCommentId = async (req, res) => {
+  const { commentId } = req.params;
+  const { userId } = req.query;
+
+  try {
+    const comment = await Comment.findById(commentId);
+    if (!comment) return res.status(404).json({ message: 'Comment không tồn tại' });
+
+    // Gỡ userId khỏi danh sách
+    comment.likes = comment.likes.filter(id => id !== userId);
     await comment.save();
-    return res.status(201).json(comment);
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error', error: err.message });
+
+    res.status(200).json({ message: 'Đã bỏ like' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
