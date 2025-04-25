@@ -1,22 +1,36 @@
+const mongoose = require('mongoose');
+
 const Comment = require('../models/comment');
 
 // Tạo bình luận
 exports.createCommentByPostId = async (req, res) => {
-  const { post_id, content, parent } = req.body;
-  const user_id = req.user.id; 
+  const { postId } = req.params;
+  const { userId, content, parent } = req.body;  
+
+  
+  if (!mongoose.isValidObjectId(postId) || !mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({ message: 'postId hoặc userId không hợp lệ' });
+  }
+
+  if (parent && !mongoose.isValidObjectId(parent)) {
+    return res.status(400).json({ message: 'parent không hợp lệ' });
+  }
 
   try {
-    const comment = new Comment({
-      post_id,
-      user_id,
+    const newComment = new Comment({
+      post_id: postId,
+      user_id: userId,
       content,
-      parent
+      createAt: new Date(),
+      isDeleted: false,
+      parent: parent || null  // Nếu parent có, lưu vào; nếu không, gán null
     });
 
-    await comment.save();
-    return res.status(201).json(comment);
-  } catch (err) {
-    return res.status(500).json({ message: 'Server error', error: err.message });
+    await newComment.save();
+    res.status(201).json(newComment);
+  } catch (error) {
+    console.error("🔥 Lỗi tạo comment:", error); // in rõ ra console
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
 
