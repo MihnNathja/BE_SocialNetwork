@@ -29,7 +29,6 @@ exports.createCommentByPostId = async (req, res) => {
 
     // Lưu bình luận mới vào cơ sở dữ liệu
     await newComment.save();
-    console.log("Saved Comment:", newComment); 
     res.status(201).json(newComment);
   } catch (error) {
     console.error("🔥 Lỗi tạo comment:", error); // In lỗi ra console
@@ -54,9 +53,6 @@ exports.getCommentsByPostId = async (req, res) => {
     const result = comments.map(c => {
       // Chuyển đổi thời gian create_at từ UTC sang múi giờ Việt Nam
       const vietnamTime = moment(c.create_at).tz("Asia/Ho_Chi_Minh").format();
-
-      console.log("Original create_at (UTC):", c.create_at);
-      console.log("Original create_at (VietNam):", vietnamTime);
 
       return {
         id: c._id,

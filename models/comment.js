@@ -16,7 +16,7 @@ const commentSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 1, // Đảm bảo rằng comment không rỗng
-    maxlength: 500 // Giới hạn độ dài bình luận
+    maxlength: 5000 // Giới hạn độ dài bình luận
   },
   create_at: {
     type: Date,
