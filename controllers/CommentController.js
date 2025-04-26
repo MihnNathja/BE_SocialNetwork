@@ -1,17 +1,18 @@
 const mongoose = require('mongoose');
-
+const moment = require("moment-timezone");
 const Comment = require('../models/comment');
 
-// Tạo bình luận
+// Tạo comment
 exports.createCommentByPostId = async (req, res) => {
   const { postId } = req.params;
-  const { userId, content, parent } = req.body;  
+  const { userId, content, parent } = req.body;
 
-  
+  // Kiểm tra postId và userId có hợp lệ không
   if (!mongoose.isValidObjectId(postId) || !mongoose.isValidObjectId(userId)) {
     return res.status(400).json({ message: 'postId hoặc userId không hợp lệ' });
   }
 
+  // Kiểm tra parent nếu có
   if (parent && !mongoose.isValidObjectId(parent)) {
     return res.status(400).json({ message: 'parent không hợp lệ' });
   }
@@ -21,18 +22,21 @@ exports.createCommentByPostId = async (req, res) => {
       post_id: postId,
       user_id: userId,
       content,
-      createAt: new Date(),
+      create_at: new Date(),  
       isDeleted: false,
       parent: parent || null  // Nếu parent có, lưu vào; nếu không, gán null
     });
 
+    // Lưu bình luận mới vào cơ sở dữ liệu
     await newComment.save();
+    console.log("Saved Comment:", newComment); 
     res.status(201).json(newComment);
   } catch (error) {
-    console.error("🔥 Lỗi tạo comment:", error); // in rõ ra console
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    console.error("🔥 Lỗi tạo comment:", error); // In lỗi ra console
+    res.status(500).json({ message: 'Lỗi server', error: error.message }); // Trả về lỗi nếu có
   }
 };
+
 
 //Lấy danh sách bình luận
 exports.getCommentsByPostId = async (req, res) => {
@@ -46,21 +50,28 @@ exports.getCommentsByPostId = async (req, res) => {
       .sort({ create_at: -1 })
       .lean();
       
-      const result = comments.map(c => ({
+    // Chuyển đổi thời gian 'create_at' từ UTC sang múi giờ Việt Nam
+    const result = comments.map(c => {
+      // Chuyển đổi thời gian create_at từ UTC sang múi giờ Việt Nam
+      const vietnamTime = moment(c.create_at).tz("Asia/Ho_Chi_Minh").format();
+
+      console.log("Original create_at (UTC):", c.create_at);
+      console.log("Original create_at (VietNam):", vietnamTime);
+
+      return {
         id: c._id,
         postId: c.post_id,
         userId: c.user_id?._id || null,
         userName: c.user_id?.username || 'Ẩn danh',
         avatarUrl: c.user_id?.profile?.avatar || '',
         content: c.content,
-        createdAt: c.create_at,
-      
+        createdAt: vietnamTime,  // Dùng thời gian đã chuyển đổi về múi giờ Việt Nam
         likes: Array.isArray(c.likes) ? c.likes.map(id => id.toString()) : [],
         myLike: Array.isArray(c.likes) && c.likes.some(id => id.toString() === currentUserId?.toString()),
-      
         isDeleted: c.is_deleted
-      }));
-    
+      };
+    });
+  
       
 
     res.status(200).json(result);
