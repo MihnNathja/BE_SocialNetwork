@@ -61,6 +61,7 @@ exports.getCommentsByPostId = async (req, res) => {
         userName: c.user_id?.username || 'Ẩn danh',
         avatarUrl: c.user_id?.profile?.avatar || '',
         content: c.content,
+        parent: c.parent,
         createdAt: vietnamTime,  // Dùng thời gian đã chuyển đổi về múi giờ Việt Nam
         likes: Array.isArray(c.likes) ? c.likes.map(id => id.toString()) : [],
         myLike: Array.isArray(c.likes) && c.likes.some(id => id.toString() === currentUserId?.toString()),
