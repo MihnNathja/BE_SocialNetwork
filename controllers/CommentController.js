@@ -37,41 +37,97 @@ exports.createCommentByPostId = async (req, res) => {
 };
 
 
-//Lấy danh sách bình luận
+// Lấy danh sách bình luận với Aggregation Pipeline của Mongo
 exports.getCommentsByPostId = async (req, res) => {
   const { postId } = req.params;
   const currentUserId = req.query.userId;
-
-
+  if (!mongoose.Types.ObjectId.isValid(postId)) {
+    return res.status(400).json({ message: "postId không hợp lệ!" });
+  }
   try {
-      const comments = await Comment.find({ post_id: postId, is_deleted: false })
-      .populate('user_id', 'username profile')  
-      .sort({ create_at: -1 })
-      .lean();
-      
-    // Chuyển đổi thời gian 'create_at' từ UTC sang múi giờ Việt Nam
-    const result = comments.map(c => {
-      // Chuyển đổi thời gian create_at từ UTC sang múi giờ Việt Nam
-      const vietnamTime = moment(c.create_at).tz("Asia/Ho_Chi_Minh").format();
-
-      return {
-        id: c._id,
-        postId: c.post_id,
-        userId: c.user_id?._id || null,
-        userName: c.user_id?.username || 'Ẩn danh',
-        avatarUrl: c.user_id?.profile?.avatar || '',
-        content: c.content,
-        parent: c.parent,
-        createdAt: vietnamTime,  // Dùng thời gian đã chuyển đổi về múi giờ Việt Nam
-        likes: Array.isArray(c.likes) ? c.likes.map(id => id.toString()) : [],
-        myLike: Array.isArray(c.likes) && c.likes.some(id => id.toString() === currentUserId?.toString()),
-        isDeleted: c.is_deleted
-      };
-    });
-  
-      
-
-    res.status(200).json(result);
+    const comments = await Comment.aggregate([
+      {
+        $match: {
+          post_id: new mongoose.Types.ObjectId(postId),
+          is_deleted: false
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'user_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$user_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: 'parent',
+          foreignField: '_id',
+          as: 'parent_comment'
+        }
+      },
+      {
+        $unwind: {
+          path: '$parent_comment',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'parent_comment.user_id',
+          foreignField: '_id',
+          as: 'parent_user_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$parent_user_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $sort: { create_at: -1 }
+      },
+      {
+        $project: {
+          id: '$_id',
+          postId: '$post_id',
+          userId: '$user_info._id',
+          userName: { $ifNull: ['$user_info.username', 'Ẩn danh'] },
+          avatarUrl: { $ifNull: ['$user_info.profile.avatar', ''] },
+          content: 1,
+          parent: '$parent_comment._id',
+          parentUserName: { $ifNull: ['$parent_user_info.username', null] },
+          createdAt: {
+            $dateToString: {
+              date: "$create_at",
+              timezone: "Asia/Ho_Chi_Minh"
+            }
+          },
+          likes: 1,
+          myLike: { 
+            $cond: {
+              if: { $in: [currentUserId, '$likes'] },
+              then: true,
+              else: false
+            }
+          },
+          isDeleted: '$is_deleted'
+        }
+      }
+    ]);
+    
+    console.log(comments);
+    res.status(200).json(comments);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
