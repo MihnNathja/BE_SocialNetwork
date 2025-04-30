@@ -289,6 +289,89 @@ const getPostByID = async (req, res) => {
   }
 };
 
+const createStory = async (req, res) => {
+  try {
+    const { userid, content, isStory} = req.body;
+    const userIdValue = typeof userid === "object" && userid._id ? userid._id : userid;
+    if (!userid || !content) {
+      return res.status(400).json({ message: "userid và content là bắt buộc" });
+    }
+
+    const newStory = new Post({
+      userid: userIdValue,
+      isStory: isStory,
+      content: {
+        caption: content.caption,
+        pictures: content.pictures,
+        hashtags: extractHashtags(content.hashtags)
+      }
+    });
+
+    const savedStory = await newStory.save();
+    res.status(201).json({
+      message: "Story đã được tạo",
+      story: savedStory
+    });
+  } catch (err) {
+    console.error("Lỗi khi tạo story:", err);
+    res.status(500).json({ message: "Lỗi server khi tạo story" });
+  }
+};
+function extractHashtags(text) {
+  if (!text) return [];
+  return text.match(/#\w+/g) || [];
+}
+const getUserStories = async (req, res) => {
+  try {
+  const userId = req.params.userId;
+      // 1. Tìm danh sách bạn bè
+      const user = await User.findById(userId).lean();
+      if (!user) return res.status(404).json({ message: 'User not found' });
+  
+      const friendIds = user.friends?.accepted || [];
+      const visibleUserIds = [user._id, ...friendIds.map(id => new mongoose.Types.ObjectId(id))];
+
+      // 2. Tính thời gian 24h trước
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // 3. Aggregation pipeline
+    const stories = await Post.aggregate([
+      {
+        $match: {
+          isStory: true,
+          userid: { $in: visibleUserIds },
+          createdAt: { $gte: twentyFourHoursAgo }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userid',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: '$user' },
+      { $sort: { createdAt: -1 } }
+    ]);
+        // 4. Format lại dữ liệu
+        const formattedStories = stories.map(story => ({
+          _id: story._id,
+          content: story.content,
+          createdAt: moment(story.createdAt).tz("Asia/Ho_Chi_Minh").format("HH:mm DD/MM/YYYY"),
+          userid: {
+            _id: story.user._id,
+            name: story.user.profile?.name || 'Unknown',
+            avatar: story.user.profile?.avatar || null
+          }
+        }));
+    
+        return res.status(200).json(formattedStories);
+      } catch (err) {
+        console.error('Lỗi khi lấy stories:', err);
+        return res.status(500).json({ message: 'Lỗi server' });
+      }
+};
 
 
 module.exports = {
@@ -296,5 +379,7 @@ module.exports = {
   addOrUpdateReaction,
   deleteReaction,
   getMyPosts,
-  getPostByID
+  getPostByID,
+  createStory,
+  getUserStories
 };
