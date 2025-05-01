@@ -224,7 +224,11 @@ const getPostByID = async (req, res) => {
     }
 
     // Tìm bài viết theo ID, chắc chắn bài viết tồn tại
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId)
+      .populate({
+        path: "userid",
+        select: "profile.name profile.avatar"
+      });
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }

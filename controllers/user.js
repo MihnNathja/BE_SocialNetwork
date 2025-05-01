@@ -298,6 +298,55 @@ async function updateUserProfile(userId, fullname, bio, avatarUrl, res) {
     }
 }
 
+const searchUser = async (req, res) => {
+    try {
+        console.log('Search API called with:', req.query);
+        // Lấy từ khóa tìm kiếm từ query string
+        const { keyword, userId } = req.query;  // Thêm userId để tính bạn chung
+
+        
+        // Nếu không có từ khóa, trả về lỗi
+        if (!keyword) {
+          return res.status(400).json({ message: 'Vui lòng cung cấp từ khóa tìm kiếm' });
+        }
+        // Lấy thông tin người dùng hiện tại để lấy danh sách bạn bè
+        const currentUser = await User.findById(userId); // Lấy thông tin người dùng hiện tại
+        const currentUserFriends = currentUser.friends.accepted;  // Lấy danh sách bạn bè của người dùng hiện tại
+    
+        // Tìm kiếm người dùng trong profile.name và email
+        const users = await User.find({
+          $or: [
+            { 'profile.name': { $regex: keyword, $options: 'i' } }, // Tìm theo tên
+            // { email: { $regex: keyword, $options: 'i' } }            // Tìm theo email
+          ]
+        }).select('username email profile.name profile.avatar friends.accepted'); // Chọn các trường cần thiết
+         // Tính số bạn chung
+         const result = [];
+         for (let user of users) {
+           const userFriends = user.friends.accepted;
+     
+           // Tính số bạn chung
+           const mutualFriends = userFriends.filter(friend => currentUserFriends.includes(friend.toString())).length;
+     
+           // Kiểm tra xem người dùng hiện tại có phải là bạn của người tìm kiếm không
+           const isFriend = currentUserFriends.includes(user._id.toString());
+     
+           // Thêm kết quả vào mảng
+           result.push({
+             name: user.profile.name,
+             avatarResId: user.profile.avatar,
+             mutualFriends: mutualFriends,  // Thêm số bạn chung
+             isFriend: isFriend  // Thêm trường isFriend
+           });
+         }
+     
+         // Trả về kết quả tìm kiếm
+         return res.status(200).json(result);
+      } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Có lỗi xảy ra khi tìm kiếm người dùng' });
+    }
+};
 
 const uploadAvatar = async (req, res) => {
     // try {
@@ -337,4 +386,5 @@ module.exports = {
     uploadAvatar,
     getProfile,
     updateProfile,
+    searchUser,
 };
