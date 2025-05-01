@@ -223,26 +223,37 @@ const getPostByID = async (req, res) => {
       return res.status(400).json({ message: "Invalid postId format" });
     }
 
-    // Tìm bài viết theo ID, chắc chắn bài viết tồn tại
+    // Kiểm tra xem userId có phải là một ObjectId hợp lệ không
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId format" });
+    }
+
+    // Tìm bài viết theo ID và populate thông tin người dùng
     const post = await Post.findById(postId)
-      .populate({
-        path: "userid",
-        select: "profile.name profile.avatar"
-      });
+    .populate({
+      path: "userid",
+      select: "_id profile.name profile.avatar"
+    });
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    // Format bài viết và gán myReaction
+    // Kiểm tra xem thông tin người dùng có tồn tại không
+    const user = post.userid;
+    if (!user) {
+      return res.status(404).json({ message: "User not found for the post" });
+    }
+
+    // Format thời gian
     const vietnamTime = moment(post.createdAt)
       .tz("Asia/Ho_Chi_Minh")
       .format("HH:mm DD/MM/YYYY");
 
-    const avatar = post.userid?.profile?.avatar || null;
-    const name = post.userid?.profile?.name || "Unknown";
-    const _id = post.userid?._id || null;
+      const avatar = post.userid?.profile?.avatar || null;
+      const name = post.userid?.profile?.name || "Unknown";
+      const _id = post.userid?._id || null;
 
-    // Tìm cảm xúc hiện tại của user này với bài viết
+    // Tìm cảm xúc của user này đối với bài viết
     let myReaction = null;
     if (post.reactions) {
       for (const [key, userIds] of Object.entries(post.reactions)) {
@@ -253,15 +264,21 @@ const getPostByID = async (req, res) => {
       }
     }
 
+    // Cấu trúc lại dữ liệu bài viết
     const formattedPost = {
-      ...post._doc,  // Chuyển đổi mongoose document thành object thường
+      _id: post._id.toString(),  // ID bài viết
+      content: post.content,
+      isStory: post.isStory,
+      location: post.location,
+      reactions: post.reactions,
+      myReaction: myReaction,  // Cảm xúc của người dùng đối với bài viết
       userid: {
         _id,
         name,
-        avatar
+        avatar,
       },
       createdAt: vietnamTime,
-      myReaction
+      updatedAt: moment(post.updatedAt).tz("Asia/Ho_Chi_Minh").format("HH:mm DD/MM/YYYY"),
     };
 
     res.status(200).json(formattedPost);
@@ -270,6 +287,8 @@ const getPostByID = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
 
 module.exports = {
   getFriendPosts,
