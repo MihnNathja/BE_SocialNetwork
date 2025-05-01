@@ -300,7 +300,6 @@ async function updateUserProfile(userId, fullname, bio, avatarUrl, res) {
 
 const searchUser = async (req, res) => {
     try {
-        console.log('Search API called with:', req.query);
         // Lấy từ khóa tìm kiếm từ query string
         const { keyword, userId } = req.query;  // Thêm userId để tính bạn chung
 
