@@ -234,7 +234,6 @@ const getPostByID = async (req, res) => {
       path: "userid",
       select: "_id profile.name profile.avatar"
     });
-
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
@@ -374,6 +373,62 @@ const getUserStories = async (req, res) => {
       }
 };
 
+const searchPostsByHashtag = async (req, res) => {
+  try {
+    const { keyword, userId } = req.query;
+
+    if (!keyword) {
+      return res.status(400).json({ message: "Hashtag is required" });
+    }
+    // Tìm tất cả bài viết chứa hashtag (không phân biệt # hay không, không phân biệt hoa thường)
+    const regex = new RegExp(`^#?${keyword}$`, "i");
+
+    const posts = await Post.find({ "content.hashtags": { $in: [regex] } })
+      .populate({
+        path: "userid",
+        select: "_id profile.name profile.avatar"
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Format kết quả giống getFriendPosts
+    const formattedPosts = posts.map(post => {
+      const vietnamTime = moment(post.createdAt)
+        .tz("Asia/Ho_Chi_Minh")
+        .format("HH:mm DD/MM/YYYY");
+
+      const avatar = post.userid?.profile?.avatar || null;
+      const name = post.userid?.profile?.name || "Unknown";
+      const _id = post.userid?._id || null;
+
+      let myReaction = null;
+      if (post.reactions) {
+        for (const [key, userIds] of Object.entries(post.reactions)) {
+          if (userIds.map(String).includes(userId)) {
+            myReaction = mapReactionKeyToLabel(key);
+            break;
+          }
+        }
+      }
+
+      return {
+        ...post,
+        userid: {
+          _id,
+          name,
+          avatar
+        },
+        createdAt: vietnamTime,
+        myReaction
+      };
+    });
+
+    res.status(200).json(formattedPosts);
+  } catch (err) {
+    console.error("Error searching posts by hashtag:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 module.exports = {
   getFriendPosts,
@@ -382,5 +437,6 @@ module.exports = {
   getMyPosts,
   getPostByID,
   createStory,
-  getUserStories
+  getUserStories,
+  searchPostsByHashtag
 };

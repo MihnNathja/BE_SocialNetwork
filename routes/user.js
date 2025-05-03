@@ -11,5 +11,6 @@ router.post('/forgot-password', ctrls.forgotPassword);
 router.post('/verifyOTP', ctrls.verifyOTP);
 router.post('/reset-password', ctrls.resetPassword);
 router.put("/update-profile", upload.single("file"), ctrls.updateProfile);
+router.get('/search/user', ctrls.searchUser);
 
 module.exports = router
