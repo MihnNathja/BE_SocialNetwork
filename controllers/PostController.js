@@ -16,7 +16,7 @@ const getFriendPosts = async (req, res) => {
 
 
     // 2. Lấy post của bạn bè
-    const posts = await Post.find({ userid: { $in: friendIds } })
+    const posts = await Post.find({ userid: { $in: friendIds }, isStory: false })
       .populate({
         path: "userid",
         select: "_id profile.name profile.avatar"
@@ -136,7 +136,7 @@ return res.status(200).json({ message: "Reaction removed successfully" });
 const getMyPosts = async (req, res) => {
   try {
     const userId = req.params.userId;
-    const posts = await Post.find({ userid: userId })
+    const posts = await Post.find({ userid: userId, isStory: false })
       .populate({
         path: "userid",
         select: "_id profile.name profile.avatar"
@@ -322,8 +322,9 @@ function extractHashtags(text) {
   return text.match(/#\w+/g) || [];
 }
 const getUserStories = async (req, res) => {
+  
   try {
-  const userId = req.params.userId;
+    const userId = req.params.userId;
       // 1. Tìm danh sách bạn bè
       const user = await User.findById(userId).lean();
       if (!user) return res.status(404).json({ message: 'User not found' });
