@@ -440,6 +440,32 @@ const searchPostsByHashtag = async (req, res) => {
   }
 };
 
+const createPost = async (req, res) => {
+  try {
+    const { userid, content } = req.body;
+    if (!userid || !content) {
+      return res.status(400).json({ message: "userid và content là bắt buộc" });
+    }
+
+    const newPost = new Post({
+      userid,
+      content: {
+        caption: content.caption,
+        pictures: content.pictures,
+        hashtags: content.hashtags
+      }
+    });
+
+    await newPost.save();
+    return res.status(201).json({
+      message: "Bài viết đã được tạo",
+    });
+  } catch (err) {
+    console.error("Lỗi khi tạo bài viết:", err);
+    res.status(500).json({ message: "Lỗi server khi tạo bài viết" });
+  }
+};
+
 module.exports = {
   getFriendPosts,
   addOrUpdateReaction,
@@ -448,5 +474,6 @@ module.exports = {
   getPostByID,
   createStory,
   getUserStories,
-  searchPostsByHashtag
+  searchPostsByHashtag,
+  createPost
 };

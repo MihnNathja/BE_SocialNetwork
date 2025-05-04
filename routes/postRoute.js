@@ -7,6 +7,7 @@ router.post("/reaction/:postId", ctrls.addOrUpdateReaction);
 router.delete("/reaction/:postId", ctrls.deleteReaction);
 router.get("/myPosts/:userId", ctrls.getMyPosts);
 router.get("/postDetail", ctrls.getPostByID);
+router.post("/create", ctrls.createPost);
 router.get('/search', ctrls.searchPostsByHashtag);
 router.get("/:userId", ctrls.getFriendPosts);
 router.post("/story/create", ctrls.createStory);
