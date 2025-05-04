@@ -82,7 +82,7 @@ const addOrUpdateReaction = async (req, res) => {
 
     // Thêm userId vào reaction mới
     if (!Array.isArray(post.reactions[englishReaction])) {
-      post.reactions[reacenglishReactiontion] = [];  // Khởi tạo nếu chưa có mảng
+      post.reactions[englishReaction] = [];  // Khởi tạo nếu chưa có mảng
     }
     post.reactions[englishReaction].push(userId);
 
@@ -183,7 +183,6 @@ const getMyPosts = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // Hàm chuyển key -> label tiếng Việt
 function mapReactionKeyToLabel(key) {
   const map = {
@@ -197,7 +196,6 @@ function mapReactionKeyToLabel(key) {
   };
   return map[key] || null;
 }
-
 const reactionMap = {
   "Thích": "like",
   "Thương": "love",
@@ -207,7 +205,6 @@ const reactionMap = {
   "Buồn": "sad",
   "Giận": "angry"
 };
-
 const getPostByID = async (req, res) => {
   try {
     const postId = req.query.postId;
@@ -287,7 +284,6 @@ const getPostByID = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 const createStory = async (req, res) => {
   try {
     const { userid, content, isStory} = req.body;
@@ -354,18 +350,32 @@ const getUserStories = async (req, res) => {
       { $unwind: '$user' },
       { $sort: { createdAt: -1 } }
     ]);
-        // 4. Format lại dữ liệu
-        const formattedStories = stories.map(story => ({
-          _id: story._id,
-          content: story.content,
-          createdAt: moment(story.createdAt).tz("Asia/Ho_Chi_Minh").format("HH:mm DD/MM/YYYY"),
-          userid: {
-            _id: story.user._id,
-            name: story.user.profile?.name || 'Unknown',
-            avatar: story.user.profile?.avatar || null
+    // 4. Format kết quả
+    const formattedStories = stories.map(story => {
+      let myReaction = null;
+
+      if (story.reactions) {
+        for (const [key, userIds] of Object.entries(story.reactions)) {
+          if (Array.isArray(userIds) && userIds.map(String).includes(userId)) {
+            myReaction = mapReactionKeyToLabel(key);
+            break;
           }
-        }));
-    
+        }
+      }
+
+      return {
+        _id: story._id,
+        content: story.content,
+        createdAt: story.createdAt, // hoặc .toISOString()
+        userid: {
+          _id: story.user._id,
+          name: story.user.profile?.name || 'Unknown',
+          avatar: story.user.profile?.avatar || null
+        },
+        myReaction
+      };
+    });
+    console.log(formattedStories);
         return res.status(200).json(formattedStories);
       } catch (err) {
         console.error('Lỗi khi lấy stories:', err);
