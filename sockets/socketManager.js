@@ -1,6 +1,6 @@
 const registerChatHandlers = require('./handlers/chatHandler.js');
 const registerMessageHandlers = require('./handlers/messageHandler.js');
-//const registerNotificationHandlers = require('./handlers/notificationHandler');
+const registerNotificationHandlers = require('./handlers/notificationHandler');
 
 const onlineUsers = new Map(); // userId -> socketId
 
