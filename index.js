@@ -22,8 +22,11 @@ app.use(express.json());
 app.use(attachIO(io));
 initRoutes(app);
 initializeSockets(io);
-
-const PORT = process.env.PORT || 3001;
+// ✅ HEALTHCHECK cho Railway
+app.get('/', (req, res) => {
+   res.send('✅ Server is alive and running!');
+});
+const PORT = process.env.PORT;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
