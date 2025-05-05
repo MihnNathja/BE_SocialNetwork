@@ -175,8 +175,7 @@ class MessageController {
             };
            
             if (req.io) {
-                req.io.of('/message').to(conversation_id).emit('new_message', messageObj);
-            
+                req.io.to(conversation_id).emit('new_message', messageObj);
             }
 
             res.status(201).json({
