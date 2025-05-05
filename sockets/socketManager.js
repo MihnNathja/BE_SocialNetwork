@@ -1,4 +1,4 @@
-const registerChatHandlers = require('./handlers/chatHandler.js/index.js');
+const registerChatHandlers = require('./handlers/chatHandler.js');
 const registerMessageHandlers = require('./handlers/messageHandler.js');
 //const registerNotificationHandlers = require('./handlers/notificationHandler');
 
