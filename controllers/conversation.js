@@ -45,7 +45,41 @@ const getChatList = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+const createOrGetPrivateConversation = async (req, res) => {
+  const { userId, userIdMe } = req.query;
+
+  if (!userId || !userIdMe) {
+    return res.status(400).json({ message: "Thiếu userId hoặc userIdMe" });
+  }
+
+  try {
+    // Tìm cuộc trò chuyện private giữa 2 người (bất kể thứ tự)
+    let conversation = await Conversation.findOne({
+      type: "private",
+      participants: { $all: [userId, userIdMe], $size: 2 }
+    });
+
+    // Nếu chưa có thì tạo
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [userId, userIdMe],
+        type: "private",
+        unread_messages: {
+          [userId]: 0,
+          [userIdMe]: 0
+        }
+      });
+    }
+
+    return res.status(200).json({ conversationId: conversation._id.toString() });
+
+  } catch (error) {
+    console.error("Lỗi createOrGetPrivateConversation:", error);
+    return res.status(500).json({ message: "Lỗi server khi xử lý cuộc trò chuyện" });
+  }
+};
 
 module.exports = {
     getChatList,
+    createOrGetPrivateConversation
 };
