@@ -10,21 +10,23 @@ const attachIO = require('./middlewares/socketmiddleware'); // Thêm dòng này
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  transports: ['websocket', 'polling'] // BẮT BUỘC cho Android
 });
 
-app.use(express.json());
-
-// Thêm middleware để attach io vào req
-app.use(attachIO(io));
-
 connectDB();
+app.use(express.json());
+app.use(attachIO(io));
 initRoutes(app);
-
-// Khởi tạo tất cả các socket
 initializeSockets(io);
-
-const PORT = process.env.PORT || 3001;
+// ✅ HEALTHCHECK cho Railway
+app.get('/', (req, res) => {
+   res.send('✅ Server is alive and running!');
+});
+const PORT = process.env.PORT;
 server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });

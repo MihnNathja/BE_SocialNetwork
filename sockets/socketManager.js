@@ -1,15 +1,17 @@
-// sockets/socketManager.js
-const chatSocket = require('./chatSocket');
-const messageSocket = require('./messageSocket');
+const registerChatHandlers = require('./handlers/chatHandler.js');
+const registerMessageHandlers = require('./handlers/messageHandler.js');
+const registerNotificationHandlers = require('./handlers/notificationHandler');
+
+const onlineUsers = new Map(); // userId -> socketId
 
 const initializeSockets = (io) => {
-    // Namespace cho chat socket cũ
-    const chatIo = io.of('/chat');
-    chatSocket(chatIo);
+  io.on('connection', (socket) => {
+    console.log('✅ New socket connected:', socket.id);
 
-    // Namespace cho message socket mới
-    const messageIo = io.of('/message');
-    messageSocket(messageIo);
+    registerChatHandlers(socket, io, onlineUsers);
+    registerMessageHandlers(socket, io, onlineUsers);
+    registerNotificationHandlers(socket, io, onlineUsers);
+  });
 };
 
 module.exports = initializeSockets;

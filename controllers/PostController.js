@@ -353,7 +353,9 @@ const getUserStories = async (req, res) => {
     // 4. Format kết quả
     const formattedStories = stories.map(story => {
       let myReaction = null;
-
+      const vietnamTime = moment(story.createdAt)
+        .tz("Asia/Ho_Chi_Minh")
+        .format();;
       if (story.reactions) {
         for (const [key, userIds] of Object.entries(story.reactions)) {
           if (Array.isArray(userIds) && userIds.map(String).includes(userId)) {
@@ -366,7 +368,7 @@ const getUserStories = async (req, res) => {
       return {
         _id: story._id,
         content: story.content,
-        createdAt: story.createdAt, // hoặc .toISOString()
+        createdAt: vietnamTime, 
         userid: {
           _id: story.user._id,
           name: story.user.profile?.name || 'Unknown',
@@ -375,7 +377,6 @@ const getUserStories = async (req, res) => {
         myReaction
       };
     });
-    console.log(formattedStories);
         return res.status(200).json(formattedStories);
       } catch (err) {
         console.error('Lỗi khi lấy stories:', err);
