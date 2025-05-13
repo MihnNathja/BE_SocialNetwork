@@ -1,3 +1,4 @@
+// Nội dung file này đã đem qua chatHandler.js một phần
 let onlineUsers = {}; // Lưu danh sách user online
 
 module.exports = (io) => {

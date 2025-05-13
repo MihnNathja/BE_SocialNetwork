@@ -1,4 +1,4 @@
-// sockets/messageSocket.js
+// Nội dung file này đã đem qua messageHandler.js một phần
 const Message = require('../models/message');
 const User = require('../models/user');
 const Conversation = require('../models/conversation');

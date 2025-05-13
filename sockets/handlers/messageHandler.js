@@ -57,11 +57,11 @@ module.exports = (socket, io, onlineUsers) => {
       io.to(conversation_id).emit('new_message', {
         id: newMessage._id,
         conversation_id,
-        sender_id: {
-          _id: senderInfo._id,
-          username: senderInfo.username,
-          name: senderInfo.profile.name,
-          avatar: senderInfo.profile.avatar
+        sender: {
+            id: senderInfo._id,
+            username: senderInfo.username,
+            name: senderInfo.profile.name,
+            avatar: senderInfo.profile.avatar
         },
         content,
         message_type,
@@ -89,4 +89,68 @@ module.exports = (socket, io, onlineUsers) => {
       $set: { [`unread_messages.${userid}`]: 0 }
     });
   });
+  
+  socket.on('send_image', async (imageData) => {
+      try {
+          const { conversation_id, sender, image_url, timestamp } = imageData;
+
+          const newMessage = await Message.create({
+              conversation_id,
+              sender_id: sender.id,
+              content: image_url,  // Nội dung tin nhắn là URL hình ảnh
+              message_type: "image",
+              timestamp: new Date(parseInt(timestamp)),
+          });
+
+          const conversation = await Conversation.findById(conversation_id);
+          const receiverId = conversation.participants.find(id => id !== sender.id);
+
+          // Cập nhật tin nhắn cuối cùng và số lượng tin nhắn chưa đọc
+          await Conversation.findByIdAndUpdate(conversation_id, {
+              $set: {
+                  last_message: {
+                      content: "Đã gửi hình ảnh",
+                      sender_id: sender.id,
+                      timestamp: newMessage.createdAt,
+                      message_type: "image"
+                  },
+                  updatedAt: new Date()
+              },
+              $inc: {
+                  [`unread_messages.${receiverId}`]: 1
+              }
+          });
+
+          const senderInfo = await User.findById(sender.id).select('_id username profile.name profile.avatar');
+
+          io.to(conversation_id).emit('new_message', {
+              id: newMessage._id,
+              conversation_id,
+              sender_id: {
+                  _id: senderInfo._id,
+                  username: senderInfo.username,
+                  name: senderInfo.profile.name,
+                  avatar: senderInfo.profile.avatar
+              },
+              content: image_url,
+              message_type: "image",
+              timestamp: newMessage.createdAt,
+          });
+
+          // Thông báo cho người nhận nếu đang online
+          const receiverSocketId = onlineUsers.get(receiverId);
+          if (receiverSocketId) {
+              io.to(receiverSocketId).emit('notification', {
+                  type: 'new_message',
+                  senderId: sender.id,
+                  content: "Đã gửi hình ảnh"
+              });
+          }
+
+      } catch (err) {
+          console.error("Error in send_image:", err.message);
+          socket.emit('message_error', { message: 'Lỗi gửi hình ảnh', error: err.message });
+      }
+  });
+
 };
