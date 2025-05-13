@@ -116,7 +116,7 @@ exports.getCommentsByPostId = async (req, res) => {
           likes: 1,
           myLike: { 
             $cond: {
-              if: { $in: [currentUserId, '$likes'] },
+              if: { $in: [new mongoose.Types.ObjectId(currentUserId), '$likes'] },
               then: true,
               else: false
             }
@@ -125,7 +125,6 @@ exports.getCommentsByPostId = async (req, res) => {
         }
       }
     ]);
-    
     res.status(200).json(comments);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
