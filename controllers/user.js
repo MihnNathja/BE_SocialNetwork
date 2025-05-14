@@ -33,8 +33,9 @@ const getProfile = async (req, res) => {
       }
   
       // Đếm số bài viết của user
-      const postsCount = await Post.countDocuments({ userid: userId });
-  
+      //const postsCount = await Post.countDocuments({ userid: userId });
+      const postsCount = await Post.countDocuments({ userid: userId, isStory: false });
+
       // Chuẩn bị dữ liệu trả về
       const responseData = {
         id: user._id,
@@ -409,8 +410,8 @@ const getProfileUser = async (req, res) => {
       }
   
       // Đếm số bài viết của user
-      const postsCount = await Post.countDocuments({ userid: userId });
-  
+      //const postsCount = await Post.countDocuments({ userid: userId });
+      const postsCount = await Post.countDocuments({ userid: userId, isStory: false });
       // Chuẩn bị dữ liệu trả về
       const responseData = {
         id: user._id,

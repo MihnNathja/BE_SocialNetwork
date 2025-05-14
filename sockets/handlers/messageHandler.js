@@ -126,16 +126,32 @@ module.exports = (socket, io, onlineUsers) => {
           io.to(conversation_id).emit('new_message', {
               id: newMessage._id,
               conversation_id,
-              sender_id: {
-                  _id: senderInfo._id,
+              sender: {
+                  id: senderInfo._id,
                   username: senderInfo.username,
                   name: senderInfo.profile.name,
                   avatar: senderInfo.profile.avatar
               },
               content: image_url,
               message_type: "image",
-              timestamp: newMessage.createdAt,
+              timestamp: formatTimestamp(newMessage.createdAt),
+              createdAt: newMessage.createdAt
           });
+
+      //     io.to(conversation_id).emit('new_message', {
+      //   id: newMessage._id,
+      //   conversation_id,
+      //   sender: {
+      //       id: senderInfo._id,
+      //       username: senderInfo.username,
+      //       name: senderInfo.profile.name,
+      //       avatar: senderInfo.profile.avatar
+      //   },
+      //   content,
+      //   message_type,
+      //   timestamp: formatTimestamp(newMessage.createdAt),
+      //   createdAt: newMessage.createdAt
+      // });
 
           // Thông báo cho người nhận nếu đang online
           const receiverSocketId = onlineUsers.get(receiverId);

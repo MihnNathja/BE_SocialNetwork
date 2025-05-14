@@ -90,9 +90,9 @@ class MessageController {
             }
 
             // Emit socket event nếu có socket
-            if (req.io) {
-                req.io.to(conversation_id).emit('new_message', newMessage);
-            }
+            // if (req.io) {
+            //     req.io.to(conversation_id).emit('new_message', newMessage);
+            // }
 
             res.status(201).json(newMessage);
         } catch (error) {
@@ -135,48 +135,51 @@ class MessageController {
                 .select('_id username profile.name profile.avatar');
 
             // Lưu message vào database
-            const newMessage = await Message.create({
-                conversation_id,
-                sender_id: sender._id,
-                content: result.secure_url,
-                message_type: 'image'
-            });
+            // const newMessage = await Message.create({
+            //     conversation_id,
+            //     sender_id: sender._id,
+            //     content: result.secure_url,
+            //     message_type: 'image'
+            // });
             const senderInfo = await User.findById(sender.id).select('_id username profile.name profile.avatar');
             // Update last message trong conversation
-            await Conversation.findByIdAndUpdate(conversation_id, {
-                last_message: {
-                    content: 'Đã gửi một hình ảnh',
-                    sender_id: sender._id,
-                    timestamp: new Date(),
-                    message_type: 'image'
-                }
-            });
+            // await Conversation.findByIdAndUpdate(conversation_id, {
+            //     last_message: {
+            //         content: 'Đã gửi một hình ảnh',
+            //         sender_id: sender._id,
+            //         timestamp: new Date(),
+            //         message_type: 'image'
+            //     }
+            // });
 
             // Populate sender info với đầy đủ thông tin
-            await newMessage.populate({
-                path: 'sender_id',
-                select: '_id username profile.name profile.avatar'
-            });
+            // await newMessage.populate({
+            //     path: 'sender_id',
+            //     select: '_id username profile.name profile.avatar'
+            // });
 
           
             const messageObj = {
-                id: newMessage._id,
-                conversation_id: newMessage.conversation_id,
-                sender_id: {
-                    _id: senderInfo._id,
-                    username: senderInfo.username,
-                    name: senderInfo.profile.name,    
-                    avatar: senderInfo.profile.avatar 
-                },
-                content: newMessage.content,
-                message_type: newMessage.message_type,
-                timestamp: formatTimestamp(newMessage.createdAt),
-                createdAt: newMessage.createdAt
+                // id: newMessage._id,
+                // conversation_id: newMessage.conversation_id,
+                // sender_id: {
+                //     _id: senderInfo._id,
+                //     username: senderInfo.username,
+                //     name: senderInfo.profile.name,    
+                //     avatar: senderInfo.profile.avatar 
+                // },
+                content: result.secure_url,
+                
+                // message_type: newMessage.message_type,
+                // timestamp: formatTimestamp(newMessage.createdAt),
+                // createdAt: newMessage.createdAt
             };
+            console.log('imgurl', result.secure_url),
+            
            
-            if (req.io) {
-                req.io.to(conversation_id).emit('new_message', messageObj);
-            }
+            // if (req.io) {
+            //     req.io.to(conversation_id).emit('new_message', messageObj);
+            // }
 
             res.status(201).json({
                 success: true,
